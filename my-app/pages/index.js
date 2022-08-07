@@ -49,7 +49,140 @@ export default function Home() {
     return web3Provider;
   };
 
-  
+  /**
+   * addAddressToWhitelist: Adds the current connected addy to the whitelist
+   */
+  const addAddressToWhitelist = async () => {
+    try {
+      // We need a signer here since this is a 'write' transaction
+      const signer = await getProviderOrSigner(true);
+      // Create a new instance of the Contract with a Signer, which allows updating methods
+      const whitelistContract = new Contract(
+        WHITELIST_CONTRACT_ADDRESS,
+        abi,
+        signer
+      );
+      // Call addAddressToWhitelist from the contract
+      const tx = await whitelistContract.addAddressToWhitelist();
+      setLoading(true);
+      // wait for the transaction to get mined
+      await tx.wait();
+      setLoading(false);
+      // Get the updated number of whitelisted addys in the whitelist
+      await getNumberOfWhitelisted();
+      setJoinedWhitelist(true);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  /**
+   * getNumberOfWhitelisted: gets the number of whitelisted addys
+   */
+  const getNumberOfWhitelisted = async () => {
+    try {
+      // Get the provider from web3Modal, which in our case is Metamask
+      // No need for the Signer here. as we are only reading state from the blockchain
+      const provider = await getProviderOrSigner();
+      // We connect to the contract using a Provider, so we will only have read-only access to the Contract
+      const whitelistContract = new Contract(
+        WHITELIST_CONTRACT_ADDRESS,
+        abi,
+        signer
+      );
+      // Call numAddressesWhitelisted from the contract
+      const _numberOfWhitelisted = await whitelistContract.numAddressesWhitelisted();
+      setNumberOfWhitelisted(_numberOfWhitelisted);
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  /**
+   * checkIfAddressInWhitelist: Checks if the addy is whitelisted
+   */
+  const checkIfAddressInWhitelist = async () => {
+    try {
+      // We will need the signer later to get the user's addy
+      // Even though it is a read transaction, since the Signers are just special kinds of Providers, we can use it in it's place
+      const signer = await getProviderOrSigner(true);
+      const whitelistContract = new Contract(
+        WHITELIST_CONTRACT_ADDRESS,
+        abi,
+        signer
+      );
+      // Get the addy associated with the signer, which is connected to Metamask
+      const address = await signer.getAddress();
+      // Call whitelistedAddresses from the contract
+      const _joinedWhitelist = await whitelistContract.whitelistedAddresses(address);
+      setJoinedWhitelist(_joinedWhitelist);  
+    } catch (err) {
+      console.log(err);
+    }
+  };
+
+  /**
+   * connectWallet: Connects the Metamask wallet
+   */
+  const connectWallet = async () => {
+    try {
+      // Get the provider from web3Modal, which in our case is Metamask
+      // When used for the first time, it prompts the user to connect their wallet
+      await getProviderOrSigner();
+      setWalletConnected(true);
+
+      checkIfAddressInWhitelist();
+      getNumberOfWhitelisted();
+    } catch (err) {
+      console.log(err)
+    }
+  };
+
+  /**
+   * renderButton: Returns a button based on the state of the dApp
+   */
+  const renderButton = () => {
+    if (walletConnected) {
+      if (joinedWhitelist) {
+        return (
+          <div className={styles.description}>
+            Thanks for the joining the Whitelist!
+          </div>
+        );
+      } else if (loading) {
+        return <button className={styles.button}>Loading...</button>;
+      } else {
+        return (
+          <button onClick={addAddressToWhitelist} className={styles.button}>
+            Join the Whitelist!
+          </button>
+        );
+      }
+    } else {
+      return (
+        <button onClick={connectWallet} className={styles.button}>
+          Connect your wallet
+        </button>
+      );
+    }
+  };
+
+  // useEffects are used to react to changes in the state of the website
+  // The array at the end of the function call represents what state changes will trigger this effect
+  // In this case, whenever the value of `walletConnected` changes - this effect will be called
+  useEffect(() => {
+    // If the wallet is not connected, create a new instance of Web3Modal and connect the Metamask wallet
+    if (!walletConnected) {
+      // Assign the Web3Modal class to the reference object by setting it's `current` value
+      // The `current` value is persisted throughout as long as this page is open
+      web3ModalRef.current = new Web3Modal({
+        network: "goerli",
+        providerOptions: {},
+        disableInjectedProvider: false,
+      });
+      connectWallet();
+    }
+  }, [walletConnected]);
 
   return (
     <div>
