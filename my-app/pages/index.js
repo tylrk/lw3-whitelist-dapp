@@ -37,7 +37,7 @@ export default function Home() {
 
     // If the user is not connected to the Goerli network, let em know and throw an error
     const { chainId } = await web3Provider.getNetwork();
-    if (chainId !== 4) {
+    if (chainId !== 5) {
       window.alert("Change network to Goerli");
       throw new Error("Change network to Goerli");
     }
@@ -88,7 +88,7 @@ export default function Home() {
       const whitelistContract = new Contract(
         WHITELIST_CONTRACT_ADDRESS,
         abi,
-        signer
+        provider
       );
       // Call numAddressesWhitelisted from the contract
       const _numberOfWhitelisted = await whitelistContract.numAddressesWhitelisted();
